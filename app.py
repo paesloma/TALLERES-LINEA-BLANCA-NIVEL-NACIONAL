@@ -10,9 +10,11 @@ st.markdown("## 🛠️ Red Nacional de Servicios Técnicos")
 
 @st.cache_data
 def load_data():
-    # Carga y limpieza automática de nombres de columnas
+    # Carga con limpieza de nombres de columnas
     df = pd.read_csv('data_red_nacional_final.csv')
-    df.columns = df.columns.str.strip() # Elimina espacios accidentales como 'DIRECCION '
+    df.columns = df.columns.str.strip()
+    # Limpieza de saltos de línea internos en los datos para evitar errores visuales
+    df = df.replace(r'\r\n|\r|\n', ' ', regex=True)
     return df
 
 try:
@@ -27,7 +29,7 @@ try:
     busqueda_cobertura = st.sidebar.text_input("❄️ Buscar Zona de Cobertura (ej: Daule, Salitre, Quito):", 
                                              placeholder="Escribe para filtrar...")
 
-    # Lógica de filtros
+    # Aplicación de filtros
     df_filt = df.copy()
     
     if seleccion_ciudad:
@@ -36,7 +38,7 @@ try:
     if busqueda_cobertura:
         df_filt = df_filt[df_filt['COBERTURA INST AA Y LINEA BLANCA'].str.contains(busqueda_cobertura, case=False, na=False)]
 
-    # Configuración de vista y zoom
+    # Configuración de mapa
     if not df_filt.empty:
         centro_lat = df_filt['LAT_VIZ'].mean()
         centro_lon = df_filt['LON_VIZ'].mean()
@@ -57,7 +59,7 @@ try:
             <b>📞 Teléfono:</b> {row['NUMEROS DE CONTACTO']}<br>
             <hr style="margin: 5px 0;">
             <b style="color: #2E86C1;">Cobertura Detallada:</b><br>
-            <div style="max-height: 80px; overflow-y: auto; border: 1px solid #eee; padding: 5px; background: #f9f9f9;">
+            <div style="max-height: 100px; overflow-y: auto; border: 1px solid #eee; padding: 5px; background: #f9f9f9; font-size: 11px;">
                 {row['COBERTURA INST AA Y LINEA BLANCA']}
             </div>
         </div>
@@ -69,27 +71,26 @@ try:
             icon=folium.Icon(color="red", icon="wrench", prefix="fa")
         ).add_to(marker_cluster)
 
-    st_folium(m, width="100%", height=500, key="mapa_final")
+    st_folium(m, width="100%", height=500, key="mapa_final_coberturas")
 
-    # --- TABLA DESPLAZABLE Y BUSCABLE ---
-    st.markdown("### 📋 Directorio y Coberturas")
+    # --- LISTA COMPLETA DE COBERTURAS ---
+    st.markdown("### 📋 Directorio Detallado de Coberturas")
     
-    # Definimos las columnas exactas (ya sin espacios gracias al .strip())
-    cols_a_mostrar = [
+    # Columnas a mostrar en la tabla inferior
+    cols_vista = [
         'NOMBRE DEL TALLER', 
         'CIUDAD BASE', 
-        'DIRECCION', 
         'NUMEROS DE CONTACTO', 
-        'COBERTURA INST AA Y LINEA BLANCA'
+        'COBERTURA INST AA Y LINEA BLANCA',
+        'DIRECCION'
     ]
     
-    # st.dataframe permite desplazar a los lados si el texto es largo
+    # st.data_editor o st.dataframe permiten ver el contenido completo y copiarlo
     st.dataframe(
-        df_filt[cols_a_mostrar], 
+        df_filt[cols_vista], 
         use_container_width=True, 
         hide_index=True
     )
 
 except Exception as e:
-    st.error(f"Error detectado: {e}")
-    st.info("Revisando consistencia de nombres de columnas...")
+    st.error(f"Error al cargar coberturas: {e}")

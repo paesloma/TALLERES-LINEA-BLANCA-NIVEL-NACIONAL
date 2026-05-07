@@ -10,7 +10,7 @@ import base64
 import re
 
 # 1. Configuración de pantalla
-st.set_page_config(page_title="Red Nacional TVS - Postventa", layout="wide")
+st.set_page_config(page_title="SERVICIO TECNICO A NIVEL NACIONAL", layout="wide")
 
 # --- CARGA DE DATOS ---
 @st.cache_data

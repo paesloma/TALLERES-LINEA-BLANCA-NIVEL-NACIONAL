@@ -3,33 +3,34 @@ import pandas as pd
 import folium
 from streamlit_folium import st_folium
 from folium.plugins import MarkerCluster
-from PIL import Image # Librería para manejo de imágenes
+from PIL import Image
+import os
 
-# 1. Configuración de pantalla ancha y título de pestaña
+# 1. Configuración de pantalla ancha
 st.set_page_config(page_title="Red Nacional TVS - Postventa", layout="wide")
 
-# --- CABECERA CON IMAGEN (NUEVO) ---
-# Intenta cargar la imagen desde el repositorio. Asegúrate de subir 'banner_header.png' a GitHub.
-try:
-    # Cambia 'banner_header.png' por el nombre EXACTO de tu archivo de imagen subido
-    imagen_cabecera = Image.open('banner_header.png')
-    
-    # Muestra la imagen. use_container_width=True la hace responsiva al ancho de la pantalla.
-    st.image(imagen_cabecera, use_container_width=True)
-    
-except FileNotFoundError:
-    # Mensaje de error amigable si no encuentra la imagen
-    st.error("🚨 No se encontró el archivo de imagen para la cabecera.")
-    st.info("Por favor, asegúrate de subir la imagen a tu repositorio de GitHub con el nombre 'banner_header.png' o actualiza este nombre en el código.")
-    
-# Separador visual opcional
-st.markdown("---")
+# --- CABECERA PERSONALIZADA ---
+nombre_imagen = 'banner_header.png'
 
-# --- CARGA DE DATOS ---
+if os.path.exists(nombre_imagen):
+    img = Image.open(nombre_imagen)
+    st.image(img, use_container_width=True)
+else:
+    # Banner de respaldo en caso de que la imagen no cargue
+    st.markdown(
+        """
+        <div style="background: linear-gradient(90deg, #d32f2f 0%, #1976d2 100%); padding:25px; border-radius:10px; text-align:center; margin-bottom:20px;">
+            <h1 style="color:white; margin:0; font-family:sans-serif;">TVS ECUADOR</h1>
+            <p style="color:white; margin:0; opacity:0.8;">Red Nacional de Servicios Técnicos - Postventa</p>
+        </div>
+        """, 
+        unsafe_allow_html=True
+    )
+
 @st.cache_data
 def load_data():
+    # Carga y limpieza automática de nombres de columnas
     df = pd.read_csv('data_red_nacional_final.csv')
-    # Limpieza básica de columnas y datos
     df.columns = df.columns.str.strip()
     df = df.replace(r'\r\n|\r|\n', ' ', regex=True)
     return df
@@ -40,37 +41,31 @@ try:
     # --- BARRA LATERAL: FILTROS ---
     st.sidebar.header("🔍 Buscador y Filtros")
     
-    # Filtro por Ciudad Base
     ciudades_lista = sorted(df['CIUDAD BASE'].unique())
     seleccion_ciudad = st.sidebar.multiselect("📍 Ciudad Base del Taller:", ciudades_lista)
 
-    # Filtro por Zona de Cobertura (Búsqueda de texto)
-    busqueda_cobertura = st.sidebar.text_input("❄️ Buscar Zona de Cobertura (ej: Daule):", 
-                                             placeholder="Escribe para filtrar...")
+    busqueda_cobertura = st.sidebar.text_input("❄️ Buscar Zona de Cobertura (ej: Daule, Salitre):", 
+                                             placeholder="Escribe aquí para filtrar...")
 
-    # Aplicación de filtros combinados
+    # Aplicación de filtros
     df_filt = df.copy()
-    
     if seleccion_ciudad:
         df_filt = df_filt[df_filt['CIUDAD BASE'].isin(seleccion_ciudad)]
-    
     if busqueda_cobertura:
         df_filt = df_filt[df_filt['COBERTURA INST AA Y LINEA BLANCA'].str.contains(busqueda_cobertura, case=False, na=False)]
 
-    # Métrica rápida de resultados
-    st.info(f"Se encontraron **{len(df_filt)}** talleres registrados.")
-
-    # --- CONFIGURACIÓN DE LÍMITES Y ZOOM DEL MAPA (ECUADOR) ---
+    # --- CONFIGURACIÓN DE LÍMITES (ECUADOR) ---
     limites_ecuador = [[-5.2, -81.5], [2.5, -75.0]] 
 
     if not df_filt.empty:
         centro_lat = df_filt['LAT_VIZ'].mean()
         centro_lon = df_filt['LON_VIZ'].mean()
-        zoom_level = 12 if (seleccion_ciudad or busqueda_cobertura) else 7
+        # Zoom 13 para ciudad específica, 7 para visión general
+        zoom_level = 13 if (seleccion_ciudad or busqueda_cobertura) else 7
     else:
         centro_lat, centro_lon, zoom_level = -1.45, -78.5, 7
 
-    # --- MAPA INTERACTIVO (CON RESTRICCIÓN) ---
+    # --- MAPA CON RESTRICCIÓN ---
     m = folium.Map(
         location=[centro_lat, centro_lon], 
         zoom_start=zoom_level, 
@@ -86,13 +81,14 @@ try:
 
     for _, row in df_filt.iterrows():
         popup_html = f"""
-        <div style="font-family: sans-serif; font-size: 12px; width: 230px; line-height: 1.5;">
+        <div style="font-family: sans-serif; font-size: 12px; width: 230px;">
             <b style="color: #E74C3C; font-size: 14px;">{row['NOMBRE DEL TALLER']}</b><br>
-            <hr style="margin: 5px 0; border-top: 1px solid #eee;">
+            <hr style="margin: 5px 0;">
+            <b>📍 Ciudad:</b> {row['CIUDAD BASE']}<br>
             <b>📞 Contacto:</b> {row['NUMEROS DE CONTACTO']}<br>
-            <hr style="margin: 5px 0; border-top: 1px solid #eee;">
-            <b style="color: #2E86C1;">❄️ Cobertura Detallada:</b><br>
-            <div style="max-height: 80px; overflow-y: auto; font-size: 11px; background: #f9f9f9; padding: 3px;">
+            <hr style="margin: 5px 0;">
+            <b style="color: #2E86C1;">Cobertura Detallada:</b><br>
+            <div style="max-height: 80px; overflow-y: auto; background: #f9f9f9; padding: 5px;">
                 {row['COBERTURA INST AA Y LINEA BLANCA']}
             </div>
         </div>
@@ -104,20 +100,13 @@ try:
             icon=folium.Icon(color="red", icon="wrench", prefix="fa")
         ).add_to(marker_cluster)
 
-    # Renderizado del mapa
-    st_folium(m, width="100%", height=500, key="mapa_restringido_final")
+    st_folium(m, width="100%", height=500, key="mapa_final_tvs")
 
-    # --- LISTA BÁSICA SIEMPRE VISIBLE ---
+    # --- TABLA INFERIOR DESPLAZABLE ---
     st.markdown("### 📋 Directorio de Contactos y Coberturas")
+    cols_vista = ['NOMBRE DEL TALLER', 'CIUDAD BASE', 'NUMEROS DE CONTACTO', 'COBERTURA INST AA Y LINEA BLANCA', 'DIRECCION']
     
-    # Seleccionamos las columnas clave para la lista
-    cols_tabla = ['NOMBRE DEL TALLER', 'CIUDAD BASE', 'DIRECCION', 'NUMEROS DE CONTACTO', 'COBERTURA INST AA Y LINEA BLANCA']
-    
-    st.dataframe(
-        df_filt[cols_tabla], 
-        use_container_width=True, 
-        hide_index=True
-    )
+    st.dataframe(df_filt[cols_vista], use_container_width=True, hide_index=True)
 
 except Exception as e:
-    st.error(f"Se produjo un error crítico en la aplicación: {e}")
+    st.error(f"Error al cargar la aplicación: {e}")

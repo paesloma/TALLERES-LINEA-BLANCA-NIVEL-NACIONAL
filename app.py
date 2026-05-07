@@ -7,7 +7,7 @@ from PIL import Image
 import os
 
 # 1. Configuración de pantalla ancha
-st.set_page_config(page_title="Red Nacional TVS - Postventa", layout="wide")
+st.set_page_config(page_title="TALLERS AUTORIZADOS NIVEL NACIONAL", layout="wide")
 
 # --- CABECERA POSICIONADA A LA DERECHA ---
 nombre_img = 'banner_header.png'
@@ -17,7 +17,7 @@ col_titulo, col_logo = st.columns([3, 1])
 
 with col_titulo:
     st.markdown("<h1 style='margin-top: 10px;'>Gestión de Postventa</h1>", unsafe_allow_html=True)
-    st.caption("Red Nacional de Servicios Técnicos - TVS Ecuador")
+    st.caption("Red Nacional de Servicios Técnicos")
 
 with col_logo:
     if os.path.exists(nombre_img):

@@ -4,7 +4,7 @@ import folium
 from streamlit_folium import st_folium
 from folium.plugins import MarkerCluster
 
-st.set_page_config(page_title="Red Nacional TVS - Postventa", layout="wide")
+st.set_page_config(page_title="TALLERES A NIVEL NACIONAL", layout="wide")
 
 st.markdown("## 🛠️ Red Nacional de Servicios Técnicos")
 

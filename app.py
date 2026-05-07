@@ -10,12 +10,12 @@ import base64
 
 st.set_page_config(page_title="Red Nacional TVS - Postventa", layout="wide")
 
-# --- CABECERA ESTILIZADA ---
+# --- CABECERA PERSONALIZADA ---
 st.markdown(
     """
     <div style="background: linear-gradient(90deg, #d32f2f 0%, #1976d2 100%); padding:20px; border-radius:10px; text-align:center; margin-bottom:20px;">
         <h1 style="color:white; margin:0; font-family:sans-serif; letter-spacing: 2px;">TVS ECUADOR</h1>
-        <p style="color:white; margin:0; opacity:0.9; font-size:16px;">Red Nacional de Servicios Técnicos - Códigos QR de Contacto Directo</p>
+        <p style="color:white; margin:0; opacity:0.9; font-size:16px;">Red Nacional de Servicios Técnicos - Información Completa por Taller</p>
     </div>
     """, 
     unsafe_allow_html=True
@@ -28,7 +28,6 @@ def load_data():
     df = df.replace(r'\r\n|\r|\n', ' ', regex=True)
     return df
 
-# Función para generar imagen QR en Base64 para mostrar en tablas/HTML
 def generar_qr_base64(url):
     if not url: return ""
     qr = qrcode.QRCode(version=1, box_size=2, border=1)
@@ -50,7 +49,7 @@ def crear_enlace_wa(telefono):
 try:
     df = load_data()
 
-    # --- FILTROS ---
+    # --- BARRA LATERAL: BUSCADOR ---
     st.sidebar.header("🔍 Buscador")
     ciudades_lista = sorted(df['CIUDAD BASE'].unique())
     seleccion_ciudad = st.sidebar.multiselect("📍 Ciudad Base:", ciudades_lista)
@@ -62,7 +61,7 @@ try:
     if busqueda_cobertura:
         df_filt = df_filt[df_filt['COBERTURA INST AA Y LINEA BLANCA'].str.contains(busqueda_cobertura, case=False, na=False)]
 
-    # Generar Enlaces y QRs
+    # Procesamiento de enlaces y QRs
     df_filt['WhatsApp_Link'] = df_filt['NUMEROS DE CONTACTO'].apply(crear_enlace_wa)
     df_filt['QR_Code'] = df_filt['WhatsApp_Link'].apply(generar_qr_base64)
 
@@ -75,34 +74,59 @@ try:
     marker_cluster = MarkerCluster(options={'maxClusterRadius': 30}).add_to(m)
 
     for _, row in df_filt.iterrows():
+        # HTML detallado para el globo del mapa
         popup_html = f"""
-        <div style='text-align:center; font-family:sans-serif;'>
-            <b>{row['NOMBRE DEL TALLER']}</b><br>
-            <img src='{row['QR_Code']}' width='80'><br>
-            <a href='{row['WhatsApp_Link']}' target='_blank' style='color:green;'>Abrir Chat</a>
+        <div style='font-family:sans-serif; width:220px; line-height:1.2;'>
+            <div style='text-align:center;'>
+                <b style='color:#d32f2f; font-size:14px;'>{row['NOMBRE DEL TALLER']}</b><br>
+                <img src='{row['QR_Code']}' width='90' style='margin:10px 0;'><br>
+                <a href='{row['WhatsApp_Link']}' target='_blank' style='background-color:#25D366; color:white; padding:5px 10px; border-radius:5px; text-decoration:none; font-weight:bold;'>CHAT WHATSAPP</a>
+            </div>
+            <hr style='margin:10px 0;'>
+            <b>📍 Dirección:</b><br><span style='font-size:11px;'>{row['DIRECCION']}</span><br>
+            <hr style='margin:10px 0;'>
+            <b>📞 Contacto:</b><br><span style='font-size:11px;'>{row['NUMEROS DE CONTACTO']}</span><br>
+            <hr style='margin:10px 0;'>
+            <b>❄️ Cobertura:</b><br>
+            <div style='max-height:60px; overflow-y:auto; font-size:10px; background:#f0f0f0; padding:5px;'>
+                {row['COBERTURA INST AA Y LINEA BLANCA']}
+            </div>
         </div>
         """
         folium.Marker(
             location=[row['LAT_VIZ'], row['LON_VIZ']], 
-            popup=folium.Popup(popup_html, max_width=150), 
+            popup=folium.Popup(popup_html, max_width=250), 
             icon=folium.Icon(color="red", icon="wrench", prefix="fa")
         ).add_to(marker_cluster)
 
-    st_folium(m, width="100%", height=450, key="mapa_qr")
+    st_folium(m, width="100%", height=500, key="mapa_final_tvs")
 
-    # --- LISTA CON QR VISIBLE ---
-    st.markdown("### 📋 Directorio de Talleres con QR Individual")
+    # --- TABLA INFERIOR ---
+    st.markdown("### 📋 Listado Detallado de Talleres")
     
-    # Usamos st.column_config para mostrar la imagen del QR en la tabla
+    # Columnas a mostrar en la tabla
+    columnas_tabla = [
+        'QR_Code', 
+        'NOMBRE DEL TALLER', 
+        'CIUDAD BASE', 
+        'DIRECCION', 
+        'NUMEROS DE CONTACTO', 
+        'COBERTURA INST AA Y LINEA BLANCA'
+    ]
+    
     st.dataframe(
-        df_filt[['QR_Code', 'NOMBRE DEL TALLER', 'CIUDAD BASE', 'NUMEROS DE CONTACTO', 'COBERTURA INST AA Y LINEA BLANCA']],
+        df_filt[columnas_tabla],
         use_container_width=True,
         hide_index=True,
         column_config={
-            "QR_Code": st.column_config.ImageColumn("Escanear QR", help="Apunta tu cámara aquí para chatear"),
-            "NOMBRE DEL TALLER": st.column_config.TextColumn("Taller", width="medium"),
+            "QR_Code": st.column_config.ImageColumn("QR", help="Escanea para contacto"),
+            "NOMBRE DEL TALLER": "Taller",
+            "CIUDAD BASE": "Ciudad",
+            "DIRECCION": "Ubicación Exacta",
+            "NUMEROS DE CONTACTO": "Teléfonos",
+            "COBERTURA INST AA Y LINEA BLANCA": "Zonas Cubiertas"
         }
     )
 
 except Exception as e:
-    st.error(f"Error: {e}")
+    st.error(f"Se ha producido un error: {e}")

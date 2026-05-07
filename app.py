@@ -10,24 +10,14 @@ import base64
 import re
 
 # 1. Configuración de pantalla
-st.set_page_config(page_title="SERVICIO TECNICO NAVIONAL", layout="wide")
+st.set_page_config(page_title="Red Nacional TVS - Postventa", layout="wide")
 
-# --- CABECERA ESTILIZADA ---
-st.markdown(
-    """
-    <div style="background: linear-gradient(90deg, #d32f2f 0%, #1976d2 100%); padding:20px; border-radius:10px; text-align:center; margin-bottom:20px;">
-        <h1 style="color:white; margin:0; font-family:sans-serif; letter-spacing: 2px;">SERVICIO TECNICO NACIONAL</h1>
-        <p style="color:white; margin:0; opacity:0.9; font-size:16px;">SERVICIO TECNICO A NIVEL NACIONAL</p>
-    </div>
-    """, 
-    unsafe_allow_html=True
-)
-
+# --- CARGA DE DATOS ---
 @st.cache_data
 def load_data():
-    # Carga y limpieza de columnas
     df = pd.read_csv('data_red_nacional_final.csv')
     df.columns = df.columns.str.strip()
+    # Limpiamos saltos de línea para evitar errores en la tabla
     df = df.replace(r'\r\n|\r|\n', ' ', regex=True)
     return df
 
@@ -116,12 +106,11 @@ try:
             icon=folium.Icon(color="red", icon="wrench", prefix="fa")
         ).add_to(marker_cluster)
 
-    st_folium(m, width="100%", height=500, key="mapa_final_tvs")
+    st_folium(m, width="100%", height=550, key="mapa_final_sin_banner")
 
-    # --- TABLA INFERIOR COMPLETA ---
-    st.markdown("### 📋 Directorio Detallado de la Red")
+    # --- TABLA INFERIOR ---
+    st.markdown("### 📋 Directorio de Servicios Técnicos")
     
-    # Columnas organizadas para el usuario
     cols_tabla = ['QR_Img', 'NOMBRE DEL TALLER', 'NUMEROS DE CONTACTO', 'DIRECCION', 'COBERTURA INST AA Y LINEA BLANCA']
     
     st.dataframe(
@@ -129,11 +118,11 @@ try:
         use_container_width=True,
         hide_index=True,
         column_config={
-            "QR_Img": st.column_config.ImageColumn("QR", help="Escanea para abrir WhatsApp"),
+            "QR_Img": st.column_config.ImageColumn("QR", help="Escanea para contacto"),
             "NOMBRE DEL TALLER": "Taller Autorizado",
-            "NUMEROS DE CONTACTO": "Teléfonos",
-            "DIRECCION": "Ubicación",
-            "COBERTURA INST AA Y LINEA BLANCA": "Zona de Cobertura"
+            "NUMEROS DE CONTACTO": "Contacto",
+            "DIRECCION": "Dirección",
+            "COBERTURA INST AA Y LINEA BLANCA": "Cobertura"
         }
     )
 

@@ -2,63 +2,75 @@ import streamlit as st
 import pandas as pd
 import folium
 from streamlit_folium import st_folium
+from folium.plugins import MarkerCluster
 
-st.set_page_config(page_title="Red Nacional de Servicios", layout="wide")
+# Configuración de la página
+st.set_page_config(page_title="Red Nacional TVS", layout="wide")
 
-st.title("📍 Red Nacional de Servicios Técnicos")
-st.markdown("Visualización completa de todos los talleres y su cobertura a nivel nacional.")
+st.markdown("## 🛠️ Red Nacional de Servicios Técnicos")
+st.markdown("Consulta la ubicación y cobertura de todos los talleres a nivel nacional.")
 
-# Cargar datos
+# Función para cargar la data
 @st.cache_data
 def load_data():
-    # Asegúrate de que el nombre coincida con el CSV que subiste a GitHub
-    return pd.read_csv('data_red_nacional.csv')
+    # Asegúrate de que el archivo CSV generado anteriormente esté en tu repositorio
+    return pd.read_csv('data_red_nacional_final.csv')
 
-df = load_data()
+try:
+    df = load_data()
 
-# Filtros en la barra lateral
-st.sidebar.header("Opciones de Visualización")
-todas_las_ciudades = sorted(df['CIUDAD BASE'].unique())
-ciudad_filtro = st.sidebar.multiselect("Filtrar por Ciudad Base (opcional)", options=todas_las_ciudades)
+    # Barra lateral: Filtros
+    st.sidebar.header("Filtros de Búsqueda")
+    ciudades_disponibles = sorted(df['CIUDAD BASE'].unique())
+    seleccion = st.sidebar.multiselect("Seleccionar Ciudad Base:", ciudades_disponibles)
 
-# Lógica: Si no hay filtro seleccionado, mostrar TODOS. Si hay, mostrar filtrados.
-if ciudad_filtro:
-    df_display = df[df['CIUDAD BASE'].isin(ciudad_filtro)]
-else:
-    df_display = df
+    # Lógica de filtrado: Si no hay selección, muestra TODOS los talleres
+    df_filt = df[df['CIUDAD BASE'].isin(seleccion)] if seleccion else df
 
-# Estadísticas rápidas
-st.write(f"Mostrando **{len(df_display)}** talleres en el mapa.")
+    # Indicador de cantidad de talleres encontrados
+    st.info(f"Se han encontrado **{len(df_filt)}** talleres en la selección actual.")
 
-# Configuración del mapa centrado en Ecuador
-m = folium.Map(location=[-1.45, -78.5], zoom_start=7, tiles="OpenStreetMap")
+    # Creación del Mapa centrado en Ecuador
+    # Coordenadas aproximadas del centro del país
+    m = folium.Map(location=[-1.45, -78.5], zoom_start=7, tiles="OpenStreetMap")
 
-# Añadir todos los talleres correspondientes a la vista
-for _, row in df_display.iterrows():
-    if pd.notnull(row['LATITUD_BASE']) and pd.notnull(row['LONGITUD_BASE']):
-        # Contenido del globo de información (Popup)
-        popup_content = f"""
-        <div style='font-family: Arial; font-size: 12px; width: 220px;'>
-            <h4 style='color:#2E86C1; margin-bottom:5px;'>{row['NOMBRE DEL TALLER']}</h4>
-            <b>📍 Ciudad:</b> {row['CIUDAD BASE']}<br>
+    # Implementación de MarkerCluster para evitar solapamiento de puntos en la misma ciudad
+    marker_cluster = MarkerCluster(options={'maxClusterRadius': 30}).add_to(m)
+
+    for _, row in df_filt.iterrows():
+        # Crear el diseño del Popup (Globo de información)
+        html_info = f"""
+        <div style="font-family: sans-serif; font-size: 12px; width: 240px; line-height: 1.5;">
+            <b style="color: #d32f2f; font-size: 14px;">{row['NOMBRE DEL TALLER']}</b><br>
+            <hr style="margin: 5px 0; border: 0; border-top: 1px solid #eee;">
+            <b>📍 Ciudad Base:</b> {row['CIUDAD BASE']}<br>
             <b>🏠 Dirección:</b> {row['DIRECCION']}<br>
-            <hr style='margin:5px 0;'>
-            <b>❄️ Cobertura AA/LB:</b><br>{row['COBERTURA INST AA Y LINEA BLANCA']}<br>
-            <hr style='margin:5px 0;'>
-            <b>📞 Contacto:</b> {row['NUMEROS DE CONTACTO']}
+            <b>📞 Contacto:</b> {row['NUMEROS DE CONTACTO']}<br>
+            <hr style="margin: 5px 0; border: 0; border-top: 1px solid #eee;">
+            <b style="color: #2E86C1;">❄️ Cobertura AA y Línea Blanca:</b><br>
+            <small>{row['COBERTURA INST AA Y LINEA BLANCA']}</small>
         </div>
         """
         
+        # Añadir marcador al cluster
         folium.Marker(
-            location=[row['LATITUD_BASE'], row['LONGITUD_BASE']],
-            popup=folium.Popup(popup_content, max_width=300),
-            tooltip=f"{row['NOMBRE DEL TALLER']} - {row['CIUDAD BASE']}",
-            icon=folium.Icon(color="blue", icon="info-sign")
-        ).add_to(m)
+            location=[row['LAT_VIZ'], row['LON_VIZ']],
+            popup=folium.Popup(html_info, max_width=300),
+            tooltip=f"{row['NOMBRE DEL TALLER']} ({row['CIUDAD BASE']})",
+            icon=folium.Icon(color="red", icon="wrench", prefix="fa")
+        ).add_to(marker_cluster)
 
-# Renderizar mapa
-st_folium(m, width="100%", height=600)
+    # Renderizar el mapa en Streamlit
+    st_folium(m, width="100%", height=600, returned_objects=[])
 
-# Tabla de datos debajo del mapa
-with st.expander("Ver lista completa de talleres"):
-    st.dataframe(df_display, use_container_width=True)
+    # Tabla de datos detallada en la parte inferior
+    with st.expander("📂 Ver lista detallada de talleres y coberturas"):
+        st.dataframe(
+            df_filt[['NOMBRE DEL TALLER', 'CIUDAD BASE', 'DIRECCION', 'NUMEROS DE CONTACTO', 'COBERTURA INST AA Y LINEA BLANCA']], 
+            use_container_width=True,
+            hide_index=True
+        )
+
+except Exception as e:
+    st.error(f"Error al cargar el archivo de datos: {e}")
+    st.warning("Asegúrate de que el archivo 'data_red_nacional_final.csv' esté presente en el repositorio de GitHub.")

@@ -10,14 +10,14 @@ import base64
 import re
 
 # 1. Configuración de pantalla
-st.set_page_config(page_title="Red Nacional TVS - Postventa", layout="wide")
+st.set_page_config(page_title="SERVICIO TECNICO NAVIONAL", layout="wide")
 
 # --- CABECERA ESTILIZADA ---
 st.markdown(
     """
     <div style="background: linear-gradient(90deg, #d32f2f 0%, #1976d2 100%); padding:20px; border-radius:10px; text-align:center; margin-bottom:20px;">
-        <h1 style="color:white; margin:0; font-family:sans-serif; letter-spacing: 2px;">TVS ECUADOR</h1>
-        <p style="color:white; margin:0; opacity:0.9; font-size:16px;">Directorio Nacional de Servicios Técnicos - Gestión de Postventa</p>
+        <h1 style="color:white; margin:0; font-family:sans-serif; letter-spacing: 2px;">SERVICIO TECNICO NACIONAL</h1>
+        <p style="color:white; margin:0; opacity:0.9; font-size:16px;">SERVICIO TECNICO A NIVEL NACIONAL</p>
     </div>
     """, 
     unsafe_allow_html=True

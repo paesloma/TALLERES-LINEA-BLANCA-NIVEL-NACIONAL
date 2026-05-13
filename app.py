@@ -49,7 +49,7 @@ def crear_enlace_wa(telefono_crudo):
     """Crea el link de WhatsApp con el primer número detectado"""
     numero_unico = extraer_primer_numero(telefono_crudo)
     if not numero_unico: return None
-    mensaje = urllib.parse.quote("Buen dia, tengo una articulo de linea blanca (TCL - HB - RCA - CHIQ). Deseo soliciar una revision tecnica, me podria ayudar con informacion y agendamiento.Gracias")
+    mensaje = urllib.parse.quote("Buen día, tengo un artículo de línea blanca (TCL - HB - RCA - CHIQ). Deseo solicitar una revisión técnica 🧑🏼‍🔧🔧, me podría ayudar con información y agendamiento. Gracias")
     return f"https://wa.me/{numero_unico}?text={mensaje}"
 
 try:
